@@ -7,6 +7,7 @@ import { TransactionList } from '@/components/TransactionList';
 import { TransactionDialog } from '@/components/TransactionDialog';
 import { FilterBar } from '@/components/FilterBar';
 import { MonthlyChart } from '@/components/MonthlyChart';
+import { ExportButton } from '@/components/ExportButton';
 import { TransactionProvider, useTransactions } from '@/contexts/TransactionContext';
 import { Transaction, MonthlyStats } from '@/types/transaction';
 import { exportToCSV } from '@/lib/transaction-storage';
@@ -190,13 +191,16 @@ const ExpenseTrackerContent = () => {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <h2 className="text-2xl font-semibold">Transactions</h2>
-            <Button onClick={() => {
-              setEditingTransaction(undefined);
-              setDialogOpen(true);
-            }}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Transaction
-            </Button>
+            <div className="flex gap-2">
+              <ExportButton />
+              <Button onClick={() => {
+                setEditingTransaction(undefined);
+                setDialogOpen(true);
+              }}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Transaction
+              </Button>
+            </div>
           </div>
 
           <FilterBar

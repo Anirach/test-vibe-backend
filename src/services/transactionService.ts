@@ -87,4 +87,12 @@ export const transactionService = {
     const response = await apiClient.get('/transactions/monthly');
     return response.data.data.monthlyStats;
   },
+
+  async exportTransactions(format: 'csv' | 'json', filters?: TransactionFilters): Promise<Blob> {
+    const response = await apiClient.get('/transactions/export', {
+      params: { ...filters, format },
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };

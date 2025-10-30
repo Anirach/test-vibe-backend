@@ -13,11 +13,13 @@ This is a full-stack expense tracking application with a React frontend and Node
 - **📈 Monthly Charts**: Visual representation of 6-month financial trends using Recharts
 - **🔍 Smart Filtering**: Filter transactions by category and month
 - **📂 Multiple Categories**: Food, Travel, Bills, Shopping, Entertainment, Healthcare, Salary, Freelance, Investment, and Other
-- **📤 CSV Export**: Export filtered transactions for external analysis
+- **📤 Export Data**: Export transactions in CSV or JSON format with filtering support
 - **💾 SQLite Database**: All data persisted in local database with Prisma ORM
-- **📱 Responsive Design**: Mobile-friendly interface
+- **📱 Responsive Design**: Mobile-friendly interface with optimized bundle size
 - **🔔 Toast Notifications**: Real-time feedback for all user actions
-- **⚡ Full REST API**: Complete backend API with validation and error handling
+- **⚡ Full REST API**: Complete backend API with validation, error handling, and compression
+- **🚀 Performance Optimized**: Database indexes, gzip compression, and lazy-loaded routes
+- **📝 Type-Safe**: Full TypeScript coverage on both frontend and backend
 
 ## 🛠️ Tech Stack
 
@@ -202,14 +204,40 @@ nvm use 18
 
 The backend provides the following REST API endpoints:
 
+### Health Check
 - `GET /api/health` - Health check endpoint
-- `GET /api/transactions` - Get all transactions (with pagination & filters)
+  - **Response**: `{ status: 'OK', message: 'Server is running' }`
+
+### Transactions
+- `GET /api/transactions` - Get all transactions with pagination & filters
+  - **Query Params**: `page`, `limit`, `category`, `type`, `month`, `year`, `sortBy`, `sortOrder`
+  - **Response**: `{ status: 'success', data: { transactions: [], pagination: {...} } }`
+
 - `GET /api/transactions/:id` - Get single transaction by ID
+  - **Response**: `{ status: 'success', data: { transaction: {...} } }`
+
 - `POST /api/transactions` - Create new transaction
+  - **Body**: `{ type, amount, category, description, date }`
+  - **Response**: `{ status: 'success', data: { transaction: {...} } }`
+
 - `PUT /api/transactions/:id` - Update transaction
+  - **Body**: Partial transaction data
+  - **Response**: `{ status: 'success', data: { transaction: {...} } }`
+
 - `DELETE /api/transactions/:id` - Delete transaction
+  - **Response**: `{ status: 'success', message: 'Transaction deleted' }`
+
+### Statistics
 - `GET /api/transactions/stats` - Get transaction statistics
-- `GET /api/transactions/monthly` - Get monthly aggregated data
+  - **Response**: `{ status: 'success', data: { totalIncome, totalExpense, balance, transactionCount } }`
+
+- `GET /api/transactions/monthly` - Get monthly aggregated data (last 6 months)
+  - **Response**: `{ status: 'success', data: { monthlyStats: [...] } }`
+
+### Export
+- `GET /api/transactions/export` - Export transactions
+  - **Query Params**: `format` (csv|json), plus all filter params
+  - **Response**: File download (CSV or JSON)
 
 ### Data Persistence
 

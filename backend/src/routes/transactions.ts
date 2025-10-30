@@ -7,6 +7,7 @@ import {
   deleteTransaction,
   getTransactionStats,
   getMonthlyStats,
+  exportTransactions,
 } from '../controllers/transactionController';
 import {
   validate,
@@ -22,6 +23,7 @@ const router = Router();
 // Stats endpoints (must come before /:id)
 router.get('/stats', asyncHandler(getTransactionStats));
 router.get('/monthly', asyncHandler(getMonthlyStats));
+router.get('/export', asyncHandler(exportTransactions));
 
 // CRUD endpoints
 router.get('/', validateQuery(transactionQuerySchema), asyncHandler(getAllTransactions));

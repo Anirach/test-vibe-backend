@@ -207,19 +207,19 @@ export const getTransactionStats = async (_req: Request, res: Response) => {
     });
 
     const totalIncome = transactions
-      .filter((t) => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter((t: any) => t.type === 'income')
+      .reduce((sum: number, t: any) => sum + t.amount, 0);
 
     const totalExpense = transactions
-      .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter((t: any) => t.type === 'expense')
+      .reduce((sum: number, t: any) => sum + t.amount, 0);
 
     const balance = totalIncome - totalExpense;
 
     // Category breakdown
     const categoryMap = new Map<string, { amount: number; type: string }>();
 
-    transactions.forEach((t) => {
+    transactions.forEach((t: any) => {
       const key = `${t.category}-${t.type}`;
       const existing = categoryMap.get(key) || { amount: 0, type: t.type };
       existing.amount += t.amount;
@@ -262,7 +262,7 @@ export const getMonthlyStats = async (_req: Request, res: Response) => {
       { month: string; income: number; expense: number; balance: number }
     >();
 
-    transactions.forEach((t) => {
+    transactions.forEach((t: any) => {
       const date = new Date(t.date);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       const monthLabel = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -293,5 +293,59 @@ export const getMonthlyStats = async (_req: Request, res: Response) => {
     });
   } catch (error) {
     throw new DatabaseError('Failed to fetch monthly statistics');
+  }
+};
+
+// Export transactions
+export const exportTransactions = async (req: Request, res: Response) => {
+  try {
+    const { format = 'csv', ...filters } = req.query;
+    
+    // Parse filters
+    const category = filters.category as string | undefined;
+    const type = filters.type as 'income' | 'expense' | undefined;
+    const month = filters.month ? parseInt(filters.month as string) : undefined;
+    const year = filters.year ? parseInt(filters.year as string) : undefined;
+
+    // Build filter conditions (same as getAllTransactions)
+    const where: any = {
+      userId: DEFAULT_USER_ID,
+    };
+
+    if (category) where.category = category;
+    if (type) where.type = type;
+
+    if (month && year) {
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0, 23, 59, 59);
+      where.date = { gte: startDate, lte: endDate };
+    } else if (year) {
+      const startDate = new Date(year, 0, 1);
+      const endDate = new Date(year, 11, 31, 23, 59, 59);
+      where.date = { gte: startDate, lte: endDate };
+    }
+
+    // Get all matching transactions
+    const transactions = await prisma.transaction.findMany({
+      where,
+      orderBy: { date: 'desc' },
+    });
+
+    // Import export utilities
+    const { exportToCSV, exportToJSON } = require('../utils/export');
+
+    if (format === 'json') {
+      const jsonData = exportToJSON(transactions);
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', 'attachment; filename=transactions.json');
+      res.send(jsonData);
+    } else {
+      const csvData = exportToCSV(transactions);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=transactions.csv');
+      res.send(csvData);
+    }
+  } catch (error) {
+    throw new DatabaseError('Failed to export transactions');
   }
 };
