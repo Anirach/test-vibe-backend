@@ -16,11 +16,20 @@ export const loadTransactions = (): Transaction[] => {
     if (!data) return [];
     
     const parsed = JSON.parse(data);
-    return parsed.map((t: any) => ({
-      ...t,
-      date: new Date(t.date),
-      createdAt: new Date(t.createdAt),
-    }));
+    return parsed.map((t: any) => {
+      // Handle category migration: if it's an object, extract the name
+      let category = t.category;
+      if (typeof category === 'object' && category !== null) {
+        category = category.name || 'Other';
+      }
+      
+      return {
+        ...t,
+        category,
+        date: new Date(t.date),
+        createdAt: new Date(t.createdAt),
+      };
+    });
   } catch (error) {
     console.error('Failed to load transactions:', error);
     return [];

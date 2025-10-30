@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Card } from '@/components/ui/card';
 import { MonthlyStats } from '@/types/transaction';
@@ -7,7 +8,16 @@ interface MonthlyChartProps {
 }
 
 export const MonthlyChart = ({ data }: MonthlyChartProps) => {
-  if (data.length === 0) {
+  // Memoize the data to prevent unnecessary re-renders
+  const chartData = useMemo(() => data, [data]);
+  
+  // Generate a stable key based on data length and content
+  const chartKey = useMemo(() => {
+    if (chartData.length === 0) return 'empty';
+    return `chart-${chartData.length}-${chartData[0]?.month || 'default'}`;
+  }, [chartData]);
+
+  if (chartData.length === 0) {
     return (
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Monthly Overview</h3>
@@ -21,8 +31,8 @@ export const MonthlyChart = ({ data }: MonthlyChartProps) => {
   return (
     <Card className="p-6">
       <h3 className="text-lg font-semibold mb-4">Monthly Overview</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data}>
+      <ResponsiveContainer width="100%" height={300} key={chartKey}>
+        <BarChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
           <XAxis 
             dataKey="month" 

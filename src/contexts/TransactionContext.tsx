@@ -1,51 +1,102 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Transaction } from '@/types/transaction';
-import { loadTransactions, saveTransactions } from '@/lib/transaction-storage';
+import { transactionService } from '@/services/transactionService';
+import { useToast } from '@/hooks/use-toast';
 
 interface TransactionContextType {
   transactions: Transaction[];
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt'>) => void;
-  updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
-  deleteTransaction: (id: string) => void;
+  loading: boolean;
+  error: string | null;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
+  updateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  refreshTransactions: () => Promise<void>;
 }
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
 
 export const TransactionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await transactionService.getTransactions({ limit: 1000 });
+      setTransactions(response.transactions);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to load transactions';
+      setError(errorMessage);
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setTransactions(loadTransactions());
+    fetchTransactions();
   }, []);
 
-  useEffect(() => {
-    if (transactions.length > 0) {
-      saveTransactions(transactions);
+  const addTransaction = async (transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
+    try {
+      setError(null);
+      const newTransaction = await transactionService.createTransaction(transaction);
+      setTransactions(prev => [newTransaction, ...prev]);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to add transaction';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
-  }, [transactions]);
-
-  const addTransaction = (transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: crypto.randomUUID(),
-      createdAt: new Date(),
-    };
-    setTransactions(prev => [newTransaction, ...prev]);
   };
 
-  const updateTransaction = (id: string, updates: Partial<Transaction>) => {
-    setTransactions(prev =>
-      prev.map(t => (t.id === id ? { ...t, ...updates } : t))
-    );
+  const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
+    try {
+      setError(null);
+      const updatedTransaction = await transactionService.updateTransaction(id, updates);
+      setTransactions(prev =>
+        prev.map(t => (t.id === id ? updatedTransaction : t))
+      );
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to update transaction';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
   };
 
-  const deleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+  const deleteTransaction = async (id: string) => {
+    try {
+      setError(null);
+      await transactionService.deleteTransaction(id);
+      setTransactions(prev => prev.filter(t => t.id !== id));
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Failed to delete transaction';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  const refreshTransactions = async () => {
+    await fetchTransactions();
   };
 
   return (
     <TransactionContext.Provider
-      value={{ transactions, addTransaction, updateTransaction, deleteTransaction }}
+      value={{ 
+        transactions, 
+        loading, 
+        error, 
+        addTransaction, 
+        updateTransaction, 
+        deleteTransaction,
+        refreshTransactions 
+      }}
     >
       {children}
     </TransactionContext.Provider>

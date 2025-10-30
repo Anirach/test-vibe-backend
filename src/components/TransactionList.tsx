@@ -41,7 +41,9 @@ export const TransactionList = ({ transactions, onEdit, onDelete }: TransactionL
                     "text-sm font-medium px-2 py-0.5 rounded-full",
                     isIncome ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
                   )}>
-                    {transaction.category}
+                    {typeof transaction.category === 'object' && transaction.category !== null 
+                      ? (transaction.category as any).name || 'Other'
+                      : transaction.category}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {format(transaction.date, 'MMM dd, yyyy')}

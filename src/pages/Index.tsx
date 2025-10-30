@@ -13,12 +13,13 @@ import { exportToCSV } from '@/lib/transaction-storage';
 import { useToast } from '@/hooks/use-toast';
 
 const ExpenseTrackerContent = () => {
-  const { transactions, addTransaction, updateTransaction, deleteTransaction } = useTransactions();
+  const { transactions, loading, addTransaction, updateTransaction, deleteTransaction } = useTransactions();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState('all');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const stats = useMemo(() => {
     const income = transactions
@@ -82,21 +83,33 @@ const ExpenseTrackerContent = () => {
       .slice(-6);
   }, [transactions]);
 
-  const handleSubmit = (data: Omit<Transaction, 'id' | 'createdAt'>) => {
-    if (editingTransaction) {
-      updateTransaction(editingTransaction.id, data);
+  const handleSubmit = async (data: Omit<Transaction, 'id' | 'createdAt'>) => {
+    try {
+      setIsSubmitting(true);
+      if (editingTransaction) {
+        await updateTransaction(editingTransaction.id, data);
+        toast({
+          title: 'Transaction updated',
+          description: 'Your transaction has been updated successfully.',
+        });
+      } else {
+        await addTransaction(data);
+        toast({
+          title: 'Transaction added',
+          description: 'Your transaction has been added successfully.',
+        });
+      }
+      setEditingTransaction(undefined);
+      setDialogOpen(false);
+    } catch (error: any) {
       toast({
-        title: 'Transaction updated',
-        description: 'Your transaction has been updated successfully.',
+        title: 'Error',
+        description: error.message || 'Failed to save transaction',
+        variant: 'destructive',
       });
-    } else {
-      addTransaction(data);
-      toast({
-        title: 'Transaction added',
-        description: 'Your transaction has been added successfully.',
-      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setEditingTransaction(undefined);
   };
 
   const handleEdit = (transaction: Transaction) => {
@@ -104,13 +117,20 @@ const ExpenseTrackerContent = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    deleteTransaction(id);
-    toast({
-      title: 'Transaction deleted',
-      description: 'Your transaction has been deleted.',
-      variant: 'destructive',
-    });
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTransaction(id);
+      toast({
+        title: 'Transaction deleted',
+        description: 'Your transaction has been deleted.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete transaction',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleExport = () => {
@@ -120,6 +140,17 @@ const ExpenseTrackerContent = () => {
       description: 'Your transactions have been exported to CSV.',
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading transactions...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -187,8 +218,10 @@ const ExpenseTrackerContent = () => {
         <TransactionDialog
           open={dialogOpen}
           onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) setEditingTransaction(undefined);
+            if (!isSubmitting) {
+              setDialogOpen(open);
+              if (!open) setEditingTransaction(undefined);
+            }
           }}
           onSubmit={handleSubmit}
           transaction={editingTransaction}
